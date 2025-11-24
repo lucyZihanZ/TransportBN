@@ -64,23 +64,7 @@ vehicle_agg <- vehicles %>%
       TRUE ~ "other"
     )
   ) %>%
-
-  mutate(
-    junction_group = case_when(
-      # --- No junction ---
-      str_detect(junction_location, regex("Not at", ignore_case = TRUE)) ~ "No junction",
-      
-      # --- Roundabout-related ---
-      str_detect(junction_location, regex("roundabout", ignore_case = TRUE)) ~ "Roundabout",
-      
-      # --- T-Junction-related ---
-      str_detect(junction_location, regex("junction", ignore_case = TRUE)) ~ "T-Junction",
-      
-      # --- Everything else ---
-      TRUE ~ "Other junction"
-    )
-  ) %>%
-  group_by(collision_index, vehicle_group, junction_group) %>%
+  group_by(collision_index, vehicle_group) %>%
   summarise(n = n(), .groups = "drop") %>%  
   tidyr::pivot_wider(
     names_from = vehicle_group,
@@ -96,9 +80,49 @@ vehicle_agg <- vehicles %>%
     # total number
     total_vehicles = car + bus_truck + motorcycle + bicycle + other
   )
-# TODO: combine the junction into vehicle_agg.
-# TODO: combine casualty_agg and vehicle_agg into the collision(smallest number in this set).
+
+junction_agg <- vehicles %>%
+  mutate(
+    junction_group = case_when(
+      str_detect(junction_location, regex("Not at", ignore_case = TRUE)) ~ "No junction",
+      str_detect(junction_location, regex("roundabout", ignore_case = TRUE)) ~ "Roundabout",
+      str_detect(junction_location, regex("junction", ignore_case = TRUE)) ~ "T-Junction",
+      TRUE ~ "Other junction"
+    )
+  ) %>%
+  group_by(collision_index, junction_group) %>% 
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(
+    names_from = junction_group,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  mutate(
+    total_junctions = rowSums(across(where(is.numeric)))
+  )
+
+vehicle_final <- vehicle_agg %>%
+  left_join(junction_agg, by = "collision_index")
+
+
+collision_final <- collision %>%
+  full_join(casualty_agg, by = "collision_index") %>%
+  full_join(vehicle_final, by = "collision_index")
+
+collision_final <- collision_final %>%
+  mutate(
+    total_vehicles_cat = case_when(
+      total_vehicles == 1 ~ "Single",
+      total_vehicles == 2 ~ "Double",
+      total_vehicles >= 3 ~ "Multiple"
+    ),
+    total_junctions_cat = case_when(
+      total_junctions == 1 ~ "Single",
+      total_junctions == 2 ~ "Double",
+      total_junctions >= 3 ~ "Multiple"
+    )
+  )
+
 # TODO: need BN methods.
 
-  
 
