@@ -38,7 +38,7 @@ vehicle_grouped <- vehicles %>%
   ) %>%
   # Count per collision
   count(vehicle_group) %>%
-  # Wide format: one column for each category
+  
   tidyr::pivot_wider(
     names_from = vehicle_group,
     values_from = n,
@@ -197,7 +197,6 @@ for (v in vehicle_cols) {
 }
 
 # 1C: convert existing total_junctions / total_vehicles (if numeric) into small bins
-# adjust breaks to your data distribution
 df$total_vehicles_num <- as.numeric(as.character(df$total_vehicles))  # if it was character
 df$total_vehicles_cat <- cut(df$total_vehicles_num,
                              breaks = c(-Inf,1,2,3,Inf),
@@ -215,7 +214,6 @@ df$casualty_count_cat <- cut(df$casualty_count_num,
 #  right = TRUE
 #)
 # 1E: pedestrian indicator (you said a binary variable if any casualty is a pedestrian)
-# if you already have `pedestrian` column it may be count; otherwise derive from casualty types
 if ("pedestrian" %in% names(df)) {
   df$pedestrian_any <- factor(ifelse(df$pedestrian > 0, "yes", "no"),
                               levels = c("no","yes"))
@@ -238,7 +236,7 @@ df$imd_cat_3 <- cut(df$mean_imd,
                     include.lowest = TRUE,
                     labels = c("low","mid","high"))
 
-# deciles (if you want more granularity)
+# deciles 
 dec_breaks <- unique(quantile(df$mean_imd, probs = seq(0,1, by=0.2), na.rm=TRUE))
 df$imd_cat_5 <- cut(df$mean_imd, breaks = dec_breaks, include.lowest = TRUE,
                     labels = paste0("d",1:(length(dec_breaks)-1)))
@@ -270,7 +268,6 @@ data_bn <- df %>% select(all_of(intersect(vars_to_keep, names(df)))) %>% na.omit
 
 df <- data_bn
 
-# -- 1. If you have 'pedestrian' but not 'pedestrian_any', create it
 if (! "pedestrian_any" %in% names(df) && "pedestrian" %in% names(df)) {
   # handle pedestrian being count or factor/character
   ped_vec <- df$pedestrian
@@ -284,7 +281,7 @@ if (! "pedestrian_any" %in% names(df) && "pedestrian" %in% names(df)) {
   message("Created pedestrian_any from pedestrian column.")
 }
 
-# -- 2. Define the set of candidate nodes you intended for the DAG
+# Define the set of candidate nodes you intended for the DAG
 candidate_nodes <- c("imd_cat_3", "urban_or_rural_area", "veh_age_cat",
                      'day_of_week',
                      "road_surface_conditions", "light_conditions", "car_present", "motorcycle_present",
@@ -299,7 +296,7 @@ missing_nodes <- setdiff(candidate_nodes, available)
 cat("Available nodes:\n"); print(available)
 cat("Missing candidate nodes (will be ignored unless created):\n"); print(missing_nodes)
 
-# -- 3. Define your desired arcs as pairs (from -> to) in a list
+# Define your desired arcs as pairs (from -> to) in a list
 desired_arcs <- list(
   c("imd_cat_3","urban_or_rural_area"),
   c("imd_cat_3","veh_age_cat"),
@@ -330,7 +327,7 @@ desired_arcs <- list(
   c("day_of_week","casualty_count_cat")
 )
 
-# -- 4. Filter the arcs so we only include arcs where both nodes are available
+#Filter the arcs so we only include arcs where both nodes are available
 valid_arcs_list <- lapply(desired_arcs, function(a) {
   if (all(a %in% available)) return(a) else return(NULL)
 })
@@ -344,7 +341,7 @@ valid_arcs_mat <- do.call(rbind, valid_arcs_list)
 colnames(valid_arcs_mat) <- c("from","to")
 cat("Using these arcs (from -> to):\n"); print(valid_arcs_mat)
 
-# -- 5. Create a DAG with the available nodes and add valid arcs
+#  Create a DAG with the available nodes and add valid arcs
 dag <- empty.graph(nodes = available)
 arcs(dag) <- valid_arcs_mat
 
@@ -353,7 +350,7 @@ print(dag)
 #plot(dag)  # will pop up in R plotting device
 library(Rgraphviz)
 graphviz.plot(dag, shape = "ellipse")
-# -- 6. Fit the BN (only on rows without NAs for the chosen variables)
+# Fit the BN (only on rows without NAs for the chosen variables)
 data_bn <- df[ , available, drop=FALSE ]
 data_bn <- na.omit(data_bn)
 data_bn <- as.data.frame(data_bn)
