@@ -18,8 +18,8 @@ results <- foreach(b = 1:B, .combine = rbind, .packages = "bnlearn") %dopar% {
   idx <- sample(nrow(data_bn), size = nrow(data_bn), replace = TRUE)
   data_b <- data_bn[idx, , drop = FALSE]
   
-  # refit parameters (MLE) with fixed structure
-  fitted_b <- bn.fit(dag, data_b, method = "mle")
+  # refit parameters (bayes) with fixed structure
+  fitted_b <- bn.fit(dag, data_b, method = "bayes")
   
   # for each surface, compute p_T - p_R
   sapply(d_surface, function(surf) {
@@ -41,7 +41,7 @@ results <- foreach(b = 1:B, .combine = rbind, .packages = "bnlearn") %dopar% {
 
 stopCluster(cl)
 
-# `results` will be a B x length(d_surface) matrix (rows = boot replicates)
+
 colnames(results) <- d_surface
 
 # Summarize
@@ -95,8 +95,8 @@ boot_mat <- foreach(b = 1:B, .combine = rbind, .packages = "bnlearn") %dopar% {
   idx <- sample(nrow(data_bn), nrow(data_bn), replace = TRUE)
   data_b <- data_bn[idx, , drop = FALSE]
   
-  # re-fit parameters (MLE) with fixed structure
-  fitted_b <- bn.fit(dag, data_b, method = "mle")
+  # re-fit parameters (bayes) with fixed structure
+  fitted_b <- bn.fit(dag, data_b, method = "bayes")
   
   # compute differences for every light level (returns numeric vector length = length(d_light))
   sapply(d_light, function(light_i) {
@@ -155,7 +155,7 @@ summary_df <- as.data.frame(t(apply(boot_mat, 2, function(x) {
 
 print(summary_df)
 
-# Plot: bar + errorbars, flipped for readability
+# plot
 p <- ggplot(summary_df, aes(x = light_conditions, y = mean)) +
   geom_col(width = 0.6, fill = "steelblue", alpha = 0.9) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, size = 0.7) +
@@ -172,10 +172,6 @@ p <- ggplot(summary_df, aes(x = light_conditions, y = mean)) +
 
 print(p)
 
-# Optionally save
-# ggsave("fatal_diff_by_light.png", p, width = 8, height = 5, dpi = 300)
-
-
 # Overall
 
 B <- 200               # number of bootstrap replicates (reduce if needed)
@@ -190,8 +186,8 @@ results <- foreach(b = 1:B, .combine = rbind, .packages = "bnlearn") %dopar% {
   idx <- sample(nrow(data_bn), size = nrow(data_bn), replace = TRUE)
   data_b <- data_bn[idx, , drop = FALSE]
   
-  # refit parameters (MLE) with fixed structure
-  fitted_b <- bn.fit(dag, data_b, method = "mle")
+  # refit parameters (bayes) with fixed structure
+  fitted_b <- bn.fit(dag, data_b, method = "bayes")
   
   p_T <- cpquery(fitted_b,
                    event    = (casualty_count_cat == "Fatal"),
@@ -223,7 +219,6 @@ summary_df
 
 library(ggplot2)
 
-# Convert to data frame for ggplot
 results_df <- data.frame(effect = results)
 
 # Histogram + density overlay
@@ -240,5 +235,3 @@ ggplot(results_df, aes(x = effect)) +
 
 
 ggsave("overall_roundabout.png", width = 8, height = 5, dpi = 300)
-
-
