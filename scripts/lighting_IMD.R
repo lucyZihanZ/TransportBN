@@ -55,8 +55,8 @@ analyze_factor_boot <- function(factor_var,
     idx <- sample(nrow(data_bn), nrow(data_bn), replace = TRUE)
     data_b <- data_bn[idx, , drop = FALSE]
     
-    # refit parameters (MLE) with fixed DAG
-    fitted_b <- bn.fit(dag, data_b, method = "mle")
+    # refit parameters (bayes) with fixed DAG
+    fitted_b <- bn.fit(dag, data_b, method = "bayes")
     
     # for each combo, sample factor_var with cpdist and compute proportions
     res_vec <- unlist(lapply(seq_len(K), function(j) {
@@ -154,14 +154,13 @@ analyze_factor_boot <- function(factor_var,
 }
 
 
-# Example: lighting conditions without base evidence
 res <- analyze_factor_boot(
   factor_var = "light_conditions",
   factor_name = "Lighting Conditions",
   data_bn = data_bn,
   dag = dag,
-  base_evidence = list(),  # add pedestrian_any='yes' if needed
-  stratify_by = NULL,      # or "some_var" to stratify
+  base_evidence = list(),  
+  stratify_by = NULL,   
   B = 200,
   cp_n = 5000
 )
