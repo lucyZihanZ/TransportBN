@@ -7,7 +7,6 @@ library(tibble)
 
 set.seed(2025)
 
-# inputs from your snippet
 vehicle_vars <- c("car_present", "motorcycle_present", "bicycle_present",
                   "bus_truck_present", "other_present")
 imd_levels <- imd_levels  # assume this exists as in your session
@@ -34,8 +33,8 @@ boot_mat <- foreach(b = 1:B, .combine = rbind, .packages = "bnlearn") %dopar% {
   idx <- sample(nrow(data_bn), nrow(data_bn), replace = TRUE)
   data_b <- data_bn[idx, , drop = FALSE]
   
-  # 2) re-fit parameters (MLE) with the fixed structure
-  fitted_b <- bn.fit(bn_structure, data_b, method = "mle")
+  # 2) re-fit parameters (bayes) with the fixed structure
+  fitted_b <- bn.fit(bn_structure, data_b, method = "bayes")
   
   # 3) for each combo, run cpdist and compute proportion of "Yes"
   sapply(seq_len(K), function(j) {
